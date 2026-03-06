@@ -6,7 +6,7 @@ module SchemaPlus::Views
         def views(name = nil)
           SchemaMonkey::Middleware::Schema::Views.start(connection: self, query_name: name, views: []) { |env|
             select_all("SELECT table_name FROM information_schema.views WHERE table_schema = SCHEMA()", env.query_name).each do |row|
-              env.views << row["table_name"]
+              env.views << (row["table_name"] || row["TABLE_NAME"])
             end
           }.views
         end
@@ -16,9 +16,9 @@ module SchemaPlus::Views
             results = select_all("SELECT view_definition, check_option FROM information_schema.views WHERE table_schema = SCHEMA() AND table_name = #{quote(view_name)}", name)
             if  results.any?
               row = results.first
-              sql = row["view_definition"]
+              sql = row["view_definition"] || row["VIEW_DEFINITION"]
               sql.gsub!(%r{#{quote_table_name(current_database)}[.]}, '')
-              case row["check_option"]
+              case (row["check_option"] || row["CHECK_OPTION"])
               when "CASCADED" then sql += " WITH CASCADED CHECK OPTION"
               when "LOCAL" then sql += " WITH LOCAL CHECK OPTION"
               end
